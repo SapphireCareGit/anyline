@@ -21,7 +21,7 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import at.nineyards.anyline.camera.NativeBarcodeResultListener;
-//import at.nineyards.anyline.modules.barcode.BarcodeScanView;
+import at.nineyards.anyline.modules.barcode.BarcodeScanView;
 import at.nineyards.anyline.util.AssetUtil;
 import at.nineyards.anyline.util.TempFileUtil;
 import io.anyline.plugin.ScanResult;
@@ -34,8 +34,6 @@ import static org.apache.cordova.Whitelist.TAG;
 public class AnylinePluginHelper {
 
 	private static Toast notificationToast;
-	private static boolean nativeBarcodeEnabled = false;
-	private static List<FirebaseVisionBarcode> finalBarcodeList;
 
 	public static JSONObject setLanguages(JSONObject json, Context context){
 		if(json.has("viewPlugin")){
@@ -47,12 +45,6 @@ public class AnylinePluginHelper {
 					if(plugin != null && plugin.has("ocrPlugin")){
 						JSONObject ocrScanPlugin = plugin.getJSONObject("ocrPlugin");{
 							JSONArray tesseractArray = ocrScanPlugin.optJSONArray("languages");
-							if(tesseractArray == null){
-								if(ocrScanPlugin.has("ocrConfig")) {
-									JSONObject ocrConfig = ocrScanPlugin.getJSONObject("ocrConfig");
-									tesseractArray = ocrConfig.optJSONArray("languages");
-								}
-							}
 							JSONArray newLanguagesArray = new JSONArray();
 							if (tesseractArray != null) {
 								String[] languages = new String[tesseractArray.length()];
@@ -125,48 +117,8 @@ public class AnylinePluginHelper {
 		return 0;
 	}
 
-	public static void setNativeBarcodeMode(JSONObject jsonObject, ScanView anylineScanView){
-		boolean nativeBarcodeEnabledJson = false;
-		if (jsonObject.has("nativeBarcodeEnabled")) {
-			try {
-				nativeBarcodeEnabledJson = jsonObject.getBoolean("nativeBarcodeEnabled");
-				if(nativeBarcodeEnabledJson){
-					enableNativeBarcode(anylineScanView, null);
-				}
-			} catch (JSONException e) {
-				e.printStackTrace();
-			}
-		}
-		nativeBarcodeEnabled = nativeBarcodeEnabledJson;
-	}
-
-	public static boolean getNativeBarcodeMode(){
-		return nativeBarcodeEnabled;
-	}
-
-	public static void clearFinalBarcodeList() {
-		finalBarcodeList=null;
-	}
-
-	public static JSONArray arrayOfDetectedBarcodes() {
-
-		if (nativeBarcodeEnabled) {
-			//List<FirebaseVisionBarcode> finalBarcodeList = new ArrayList<>();
-			//finalBarcodeList = AnylinePluginHelper.getNativeBarcodeList();
-			final JSONArray jsonArray = new JSONArray();
-			if (finalBarcodeList!= null) {
-				for (int i = 0; i < finalBarcodeList.size(); i++) {
-					jsonArray.put(AnylinePluginHelper.wrapBarcodeInJson(finalBarcodeList.get(i)));
-				}
-			}
-			return jsonArray;
-		}
-		return null;
-	}
-
 	public static JSONObject jsonHelper(Anyline4Activity activity, ScanResult<?> scanResult, JSONObject jsonObject) {
 		try {
-
 			File imageFile = TempFileUtil.createTempFileCheckCache(activity,
 					UUID.randomUUID().toString(), ".jpg");
 			scanResult.getCutoutImage().save(imageFile, 90);
@@ -174,18 +126,10 @@ public class AnylinePluginHelper {
 
 			File imageFileFull = TempFileUtil.createTempFileCheckCache(activity, UUID.randomUUID().toString(), ".jpg");
 			scanResult.getFullImage().save(imageFileFull, 90);
-			jsonObject.put("fullImagePath", imageFileFull.getAbsolutePath());
+			jsonObject.put("fullImagePath", imageFile.getAbsolutePath());
 
 			jsonObject.put("outline", activity.jsonForOutline(scanResult.getOutline()));
 			jsonObject.put("confidence", scanResult.getConfidence());
-
-			if(nativeBarcodeEnabled) {
-				JSONArray barcodeArray = arrayOfDetectedBarcodes();
-
-				if (barcodeArray.length() > 0) {
-					jsonObject.put("detectedBarcodes", barcodeArray);
-				}
-			}
 
 		} catch (IOException e) {
 			Log.e(TAG, "Image file could not be saved.", e);
@@ -210,91 +154,80 @@ public class AnylinePluginHelper {
 		return json;
 	}
 
-	private static void setNativeBarcodeList(List<FirebaseVisionBarcode> barcodes){
-		final List<FirebaseVisionBarcode> barcodeList = new ArrayList<>();
-		final List<String> barcodesDisplayedVal = new ArrayList<>();
-
-		if(barcodeList.size() == 0){
-			barcodeList.add(barcodes.get(0));
-		}
-
-		if (barcodes != null && barcodes.size() > 0) {
-			barcodesDisplayedVal.add(barcodes.get(0).getDisplayValue());
-
-			for(int i = 0; i<barcodes.size(); i++){
-				if(!barcodesDisplayedVal.contains(barcodes.get(i).getDisplayValue())){
-					barcodeList.add(barcodes.get(i));
-				}
-			}
-
-		}
-
-		finalBarcodeList = barcodeList;
-
-	}
-
-	private static List<FirebaseVisionBarcode> getNativeBarcodeList(){
-		return finalBarcodeList;
-	}
-
 	private static String findValidFormatForReference(int format) {
 		if (format == Barcode.AZTEC) {
-			return BarcodeFormat.AZTEC.toString();
+			return BarcodeScanView.BarcodeFormat.AZTEC.toString();
 		}
 		if (format == Barcode.CODABAR) {
-			return BarcodeFormat.CODABAR.toString();
+			return BarcodeScanView.BarcodeFormat.CODABAR.toString();
 		}
 		if (format == Barcode.CODE_39) {
-			return BarcodeFormat.CODE_39.toString();
+			return BarcodeScanView.BarcodeFormat.CODE_39.toString();
 		}
 		if (format == Barcode.CODE_93) {
-			return BarcodeFormat.CODE_93.toString();
+			return BarcodeScanView.BarcodeFormat.CODE_93.toString();
 		}
 		if (format == Barcode.CODE_128) {
-			return BarcodeFormat.CODE_128.toString();
+			return BarcodeScanView.BarcodeFormat.CODE_128.toString();
 		}
 		if (format == Barcode.DATA_MATRIX) {
-			return BarcodeFormat.DATA_MATRIX.toString();
+			return BarcodeScanView.BarcodeFormat.DATA_MATRIX.toString();
 		}
 		if (format == Barcode.EAN_8) {
-			return BarcodeFormat.EAN_8.toString();
+			return BarcodeScanView.BarcodeFormat.EAN_8.toString();
 		}
 		if (format == Barcode.EAN_13) {
-			return BarcodeFormat.EAN_13.toString();
+			return BarcodeScanView.BarcodeFormat.EAN_13.toString();
 		}
 		if (format == Barcode.ITF) {
-			return BarcodeFormat.ITF.toString();
+			return BarcodeScanView.BarcodeFormat.ITF.toString();
 		}
 		if (format == Barcode.PDF417) {
-			return BarcodeFormat.PDF_417.toString();
+			return BarcodeScanView.BarcodeFormat.PDF_417.toString();
 		}
 		if (format == Barcode.QR_CODE) {
-			return BarcodeFormat.QR_CODE.toString();
+			return BarcodeScanView.BarcodeFormat.QR_CODE.toString();
 		}
 		if (format == Barcode.UPC_A) {
-			return BarcodeFormat.UPC_A.toString();
+			return BarcodeScanView.BarcodeFormat.UPC_A.toString();
 		}
 		if (format == Barcode.UPC_E) {
-			return BarcodeFormat.UPC_E.toString();
+			return BarcodeScanView.BarcodeFormat.UPC_E.toString();
 		}
 
 		//others are currently not supported by the native scanner (RSS_14, RSS_EXPANDED, UPC_EAN_EXTENSION)
-		return BarcodeFormat.UNKNOWN.toString();
+		return BarcodeScanView.BarcodeFormat.UNKNOWN.toString();
 
 	}
 
-	public static void enableNativeBarcode(ScanView anylineScanView, final List<BarcodeFormat> barcodeFormats) {
+	public static List<FirebaseVisionBarcode> nativeBarcodeList(ScanView anylineScanView, final List<BarcodeFormat> barcodeFormats) {
+		final List<FirebaseVisionBarcode> barcodeList = new ArrayList<>();
+		final List<String> barcodesDisplayedVal = new ArrayList<>();
 		anylineScanView.getCameraView().enableBarcodeDetection(new NativeBarcodeResultListener() {
 			@Override
 			public void onFailure(String e) {
-				//finalBarcodeList=null;	// otherwise result from previous scan would be shown
+
 			}
 
 			@Override
 			public void onSuccess(List<FirebaseVisionBarcode> barcodes) {
-				setNativeBarcodeList(barcodes);
+				if(barcodeList.size() == 0){
+					barcodeList.add(barcodes.get(0));
+				}
+
+				if (barcodes != null && barcodes.size() > 0) {
+					barcodesDisplayedVal.add(barcodes.get(0).getDisplayValue());
+
+					for(int i = 0; i<barcodes.size(); i++){
+						if(!barcodesDisplayedVal.contains(barcodes.get(i).getDisplayValue())){
+							barcodeList.add(barcodes.get(i));
+						}
+					}
+
+				}
 			}
 		}, barcodeFormats);
+		return barcodeList;
 	}
 
 	protected static void showToast(String st, Context context) {
@@ -339,4 +272,3 @@ public class AnylinePluginHelper {
 		return jsonResult;
 	}
 }
-

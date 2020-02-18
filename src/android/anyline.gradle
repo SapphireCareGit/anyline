@@ -1,23 +1,18 @@
 repositories{
-    google()
     jcenter()
     maven { url 'https://anylinesdk.blob.core.windows.net/maven/'}
-    flatDir {
-        dirs 'libs'
-    }
 }
 
 dependencies {
     implementation 'com.google.firebase:firebase-ml-vision:19.0.2'
     implementation 'com.google.firebase:firebase-ml-vision-face-model:17.0.2'
-    implementation 'io.anyline:anylinesdk:19-NoDocUI@aar'
-//    implementation (name: 'anylinesdk-release-16', ext: 'aar')
+    implementation 'io.anyline:anylinesdk:10@aar'
 }
 
 android {
 
   defaultConfig {
-      ndk {
+    ndk {
       abiFilters "armeabi-v7a", "x86", "arm64-v8a"
     } 
   }
@@ -31,7 +26,6 @@ android {
     exclude 'META-INF/NOTICE'
     exclude 'META-INF/LICENSE'
   }
-
 }
 
 ext.postBuildExtras = {
